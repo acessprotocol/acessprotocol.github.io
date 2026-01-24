@@ -1,185 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>P2E Token Game</title>
-
-  <!-- PWA -->
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#0b0f1a">
-
-  <!-- Ethers -->
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
-
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #0b0f1a;
-      color: #ffffff;
-      text-align: center;
-      padding: 20px;
-    }
-    button {
-      padding: 12px 18px;
-      margin: 8px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    .box {
-      border: 1px solid #333;
-      padding: 15px;
-      margin: 12px auto;
-      max-width: 400px;
-    }
-    .small {
-      font-size: 12px;
-      opacity: 0.8;
-      word-break: break-all;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Auto Reward Sender</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        input, button { padding: 10px; margin: 5px 0; width: 100%; }
+    </style>
 </head>
-
 <body>
+    <h1>Auto Reward Sender</h1>
+    <label>Wallet Address:</label>
+    <input type="text" id="wallet" placeholder="Enter recipient wallet address" />
+    <label>Reward Amount:</label>
+    <input type="number" id="amount" placeholder="Enter reward amount" />
+    <label>Interval (seconds):</label>
+    <input type="number" id="interval" placeholder="Interval in seconds" />
+    <button id="startBtn">Start Auto Rewards</button>
+    <p id="status"></p>
 
-<h2>🎮 Play-to-Earn Game</h2>
+    <script>
+        // Utility to simulate sending reward
+        function sendReward(wallet, amount) {
+            // Replace this with real blockchain/web3 integration if needed
+            console.log(`Sent ${amount} reward to ${wallet}`);
+            document.getElementById('status').textContent = `Sent ${amount} reward to ${wallet} at ${new Date().toLocaleTimeString()}`;
+        }
 
-<div class="box">
-  <b>Token Contract (Polygon)</b>
-  <p class="small">
-    0xff568ef8231a9df5fb87e8160f994a44ca346b52
-  </p>
-</div>
+        let rewardInterval;
 
-<button onclick="connectWallet()">🔗 Connect Wallet</button>
-<p id="wallet">Not connected</p>
+        document.getElementById('startBtn').addEventListener('click', () => {
+            const wallet = document.getElementById('wallet').value.trim();
+            const amount = parseFloat(document.getElementById('amount').value);
+            const interval = parseInt(document.getElementById('interval').value) * 1000;
 
-<div class="box">
-  <h3>Tap & Earn</h3>
-  <p>Points: <span id="points">0</span></p>
-  <button onclick="tap()">TAP</button>
-  <br><br>
-  <button onclick="claim()">Claim Reward</button>
-  <p class="small">100 points = 1 token (manual / admin reward)</p>
-</div>
+            if (!wallet || isNaN(amount) || isNaN(interval)) {
+                alert("Please enter valid wallet, amount, and interval.");
+                return;
+            }
 
-<a href="https://app.uniswap.org/#/swap" target="_blank">
-  <button>💱 Buy Token</button>
-</a>
+            if (rewardInterval) clearInterval(rewardInterval);
 
-<script>
-/* ---------------- BASIC STATE ---------------- */
-let points = 0;
-let userAddress = "";
+            rewardInterval = setInterval(() => {
+                sendReward(wallet, amount);
+            }, interval);
 
-/* ---------------- POLYGON DETECTION ---------------- */
-const POLYGON_CHAIN_ID = "0x89"; // 137
-
-async function ensurePolygon() {
-  if (!window.ethereum) return;
-
-  const chainId = await ethereum.request({ method: "eth_chainId" });
-  if (chainId !== POLYGON_CHAIN_ID) {
-    try {
-      await ethereum.request({
-        method: "wallet_switchEthereumChain",
-        params: [{ chainId: POLYGON_CHAIN_ID }]
-      });
-    } catch (err) {
-      alert("Please switch to Polygon network");
-    }
-  }
-}
-
-/* ---------------- WALLET CONNECT ---------------- */
-async function connectWallet() {
-  if (!window.ethereum) {
-    alert("Use MetaMask or Trust Wallet browser");
-    return;
-  }
-
-  await ensurePolygon();
-
-  const accounts = await ethereum.request({
-    method: "eth_requestAccounts"
-  });
-
-  userAddress = accounts[0];
-  document.getElementById("wallet").innerText = userAddress;
-}
-
-/* ---------------- GAME LOGIC ---------------- */
-function tap() {
-  points++;
-  document.getElementById("points").innerText = points;
-}
-
-/* ---------------- DAILY LIMIT ---------------- */
-function canClaimToday() {
-  const today = new Date().toDateString();
-  const key = "lastClaim_" + userAddress;
-  return localStorage.getItem(key) !== today;
-}
-
-/* ---------------- CLAIM ---------------- */
-function claim() {
-  if (!userAddress) {
-    alert("Connect wallet first");
-    return;
-  }
-
-  if (points < 100) {
-    alert("Need at least 100 points");
-    return;
-  }
-
-  if (!canClaimToday()) {
-    alert("Daily claim limit reached");
-    return;
-  }
-
-  localStorage.setItem(
-    "lastClaim_" + userAddress,
-    new Date().toDateString()
-  );
-
-  alert(
-    "✅ Claim submitted!\n\nWallet:\n" +
-    userAddress +
-    "\n\nReward will be sent manually by admin."
-  );
-
-  points = 0;
-  document.getElementById("points").innerText = points;
-}
-
-/* ---------------- ADMIN (OPTIONAL) ----------------
-   DO NOT expose buttons for this.
-   Use only with owner wallet.
--------------------------------------------------- */
-const rewardContractAddress = "YOUR_REWARD_CONTRACT_ADDRESS";
-
-const rewardAbi = [
-  "function rewardPlayer(address player, uint256 amount)"
-];
-
-async function sendReward(player, amount) {
-  const provider = new ethers.providers.Web3Provider(window.ethereum);
-  const signer = provider.getSigner();
-
-  const contract = new ethers.Contract(
-    rewardContractAddress,
-    rewardAbi,
-    signer
-  );
-
-  await contract.rewardPlayer(
-    player,
-    ethers.utils.parseUnits(amount.toString(), 18)
-  );
-
-  alert("Reward sent successfully");
-}
-</script>
-
+            document.getElementById('status').textContent = `Auto reward started for ${wallet}, every ${interval / 1000} seconds.`;
+        });
+    </script>
 </body>
 </html>
