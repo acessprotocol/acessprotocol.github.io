@@ -1,25 +1,51 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0b0f1a">
-
+  <meta charset="UTF-8" />
   <title>P2E Token Game</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0b0f1a">
+
+  <!-- Ethers -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
+
   <style>
-    body { font-family: Arial; text-align: center; background: #0b0f1a; color: #fff; }
-    button { padding: 10px 15px; margin: 8px; font-size: 16px; }
-    .box { border: 1px solid #333; padding: 15px; margin: 10px; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #0b0f1a;
+      color: #ffffff;
+      text-align: center;
+      padding: 20px;
+    }
+    button {
+      padding: 12px 18px;
+      margin: 8px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .box {
+      border: 1px solid #333;
+      padding: 15px;
+      margin: 12px auto;
+      max-width: 400px;
+    }
+    .small {
+      font-size: 12px;
+      opacity: 0.8;
+      word-break: break-all;
+    }
   </style>
 </head>
+
 <body>
 
-<h2>🎮 Play to Earn</h2>
+<h2>🎮 Play-to-Earn Game</h2>
 
 <div class="box">
-  <p><b>Token Contract</b></p>
-  <p style="font-size:12px">
+  <b>Token Contract (Polygon)</b>
+  <p class="small">
     0xff568ef8231a9df5fb87e8160f994a44ca346b52
   </p>
 </div>
@@ -28,111 +54,84 @@
 <p id="wallet">Not connected</p>
 
 <div class="box">
-  <h3>Tap Game</h3>
+  <h3>Tap & Earn</h3>
   <p>Points: <span id="points">0</span></p>
   <button onclick="tap()">TAP</button>
   <br><br>
   <button onclick="claim()">Claim Reward</button>
+  <p class="small">100 points = 1 token (manual / admin reward)</p>
 </div>
-
-<p style="font-size:12px">
-100 Points = 1 Token (manual reward)
-</p>
 
 <a href="https://app.uniswap.org/#/swap" target="_blank">
   <button>💱 Buy Token</button>
 </a>
 
 <script>
+/* ---------------- BASIC STATE ---------------- */
 let points = 0;
 let userAddress = "";
 
-async function connectWallet() {
-  if (!window.ethereum) {
-    alert("Use MetaMask or Trust Wallet browser");
-    return;
-  }
-  const accounts = await ethereum.request({ method: "eth_requestAccounts" });
-  userAddress = accounts[0];
-  document.getElementById("wallet").innerText = userAddress;
-}
-
-function tap() {
-  points++;
-  document.getElementById("points").innerText = points;
-}
-
-function claim() {
-  if (!userAddress) {
-    alert("Connect wallet first");
-    return;
-  }
-  if (points < 100) {
-    alert("Need 100 points");
-    return;
-  }
-  alert(
-    "Claim submitted!\nWallet: " +
-    userAddress +
-    "\nPoints: " +
-    points +
-    "\n(Admin sends tokens manually)"
-  );
-  points = 0;
-  document.getElementById("points").innerText = points;
-}
-</script>
-
-<script>
+/* ---------------- POLYGON DETECTION ---------------- */
 const POLYGON_CHAIN_ID = "0x89"; // 137
 
 async function ensurePolygon() {
   if (!window.ethereum) return;
 
   const chainId = await ethereum.request({ method: "eth_chainId" });
-
   if (chainId !== POLYGON_CHAIN_ID) {
     try {
       await ethereum.request({
         method: "wallet_switchEthereumChain",
         params: [{ chainId: POLYGON_CHAIN_ID }]
       });
-    } catch (e) {
-      alert("Please switch to Polygon Network");
+    } catch (err) {
+      alert("Please switch to Polygon network");
     }
   }
 }
 
+/* ---------------- WALLET CONNECT ---------------- */
 async function connectWallet() {
   if (!window.ethereum) {
-    alert("Use MetaMask / Trust Wallet");
+    alert("Use MetaMask or Trust Wallet browser");
     return;
   }
+
   await ensurePolygon();
-  const accounts = await ethereum.request({ method: "eth_requestAccounts" });
+
+  const accounts = await ethereum.request({
+    method: "eth_requestAccounts"
+  });
+
   userAddress = accounts[0];
   document.getElementById("wallet").innerText = userAddress;
 }
 
-function canClaimToday() {
-  const today = new Date().toDateString();
-  const lastClaim = localStorage.getItem("lastClaim_" + userAddress);
-
-  if (lastClaim === today) {
-    return false;
-  }
-  return true;
+/* ---------------- GAME LOGIC ---------------- */
+function tap() {
+  points++;
+  document.getElementById("points").innerText = points;
 }
 
+/* ---------------- DAILY LIMIT ---------------- */
+function canClaimToday() {
+  const today = new Date().toDateString();
+  const key = "lastClaim_" + userAddress;
+  return localStorage.getItem(key) !== today;
+}
+
+/* ---------------- CLAIM ---------------- */
 function claim() {
   if (!userAddress) {
     alert("Connect wallet first");
     return;
   }
+
   if (points < 100) {
-    alert("Need 100 points");
+    alert("Need at least 100 points");
     return;
   }
+
   if (!canClaimToday()) {
     alert("Daily claim limit reached");
     return;
@@ -144,15 +143,21 @@ function claim() {
   );
 
   alert(
-    "Claim approved!\nWallet: " + userAddress +
-    "\nReward will be sent"
+    "✅ Claim submitted!\n\nWallet:\n" +
+    userAddress +
+    "\n\nReward will be sent manually by admin."
   );
 
   points = 0;
   document.getElementById("points").innerText = points;
 }
 
-const rewardContractAddress = "YOUR_REWARD_CONTRACT";
+/* ---------------- ADMIN (OPTIONAL) ----------------
+   DO NOT expose buttons for this.
+   Use only with owner wallet.
+-------------------------------------------------- */
+const rewardContractAddress = "YOUR_REWARD_CONTRACT_ADDRESS";
+
 const rewardAbi = [
   "function rewardPlayer(address player, uint256 amount)"
 ];
@@ -160,6 +165,7 @@ const rewardAbi = [
 async function sendReward(player, amount) {
   const provider = new ethers.providers.Web3Provider(window.ethereum);
   const signer = provider.getSigner();
+
   const contract = new ethers.Contract(
     rewardContractAddress,
     rewardAbi,
@@ -170,12 +176,10 @@ async function sendReward(player, amount) {
     player,
     ethers.utils.parseUnits(amount.toString(), 18)
   );
+
+  alert("Reward sent successfully");
 }
-
-
 </script>
-
 
 </body>
 </html>
-
