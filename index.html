@@ -1,1 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>P2E Token Game</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
+  <style>
+    body { font-family: Arial; text-align: center; background: #0b0f1a; color: #fff; }
+    button { padding: 10px 15px; margin: 8px; font-size: 16px; }
+    .box { border: 1px solid #333; padding: 15px; margin: 10px; }
+  </style>
+</head>
+<body>
+
+<h2>🎮 Play to Earn</h2>
+
+<div class="box">
+  <p><b>Token Contract</b></p>
+  <p style="font-size:12px">
+    0xff568ef8231a9df5fb87e8160f994a44ca346b52
+  </p>
+</div>
+
+<button onclick="connectWallet()">🔗 Connect Wallet</button>
+<p id="wallet">Not connected</p>
+
+<div class="box">
+  <h3>Tap Game</h3>
+  <p>Points: <span id="points">0</span></p>
+  <button onclick="tap()">TAP</button>
+  <br><br>
+  <button onclick="claim()">Claim Reward</button>
+</div>
+
+<p style="font-size:12px">
+100 Points = 1 Token (manual reward)
+</p>
+
+<a href="https://app.uniswap.org/#/swap" target="_blank">
+  <button>💱 Buy Token</button>
+</a>
+
+<script>
+let points = 0;
+let userAddress = "";
+
+async function connectWallet() {
+  if (!window.ethereum) {
+    alert("Use MetaMask or Trust Wallet browser");
+    return;
+  }
+  const accounts = await ethereum.request({ method: "eth_requestAccounts" });
+  userAddress = accounts[0];
+  document.getElementById("wallet").innerText = userAddress;
+}
+
+function tap() {
+  points++;
+  document.getElementById("points").innerText = points;
+}
+
+function claim() {
+  if (!userAddress) {
+    alert("Connect wallet first");
+    return;
+  }
+  if (points < 100) {
+    alert("Need 100 points");
+    return;
+  }
+  alert(
+    "Claim submitted!\nWallet: " +
+    userAddress +
+    "\nPoints: " +
+    points +
+    "\n(Admin sends tokens manually)"
+  );
+  points = 0;
+  document.getElementById("points").innerText = points;
+}
+</script>
+
+</body>
+</html>
 
