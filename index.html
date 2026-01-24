@@ -111,6 +111,43 @@ async function connectWallet() {
   document.getElementById("wallet").innerText = userAddress;
 }
 
+function canClaimToday() {
+  const today = new Date().toDateString();
+  const lastClaim = localStorage.getItem("lastClaim_" + userAddress);
+
+  if (lastClaim === today) {
+    return false;
+  }
+  return true;
+}
+
+function claim() {
+  if (!userAddress) {
+    alert("Connect wallet first");
+    return;
+  }
+  if (points < 100) {
+    alert("Need 100 points");
+    return;
+  }
+  if (!canClaimToday()) {
+    alert("Daily claim limit reached");
+    return;
+  }
+
+  localStorage.setItem(
+    "lastClaim_" + userAddress,
+    new Date().toDateString()
+  );
+
+  alert(
+    "Claim approved!\nWallet: " + userAddress +
+    "\nReward will be sent"
+  );
+
+  points = 0;
+  document.getElementById("points").innerText = points;
+}
 
 
 </script>
